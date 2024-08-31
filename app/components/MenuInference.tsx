@@ -5,6 +5,7 @@ interface MenuItem {
     name: string;
     description?: string;
     price: string;
+    category?: string;
 }
 
 const MenuInference: React.FC = () => {
@@ -20,7 +21,17 @@ const MenuInference: React.FC = () => {
             const response = await axios.post('/api/infer-menu', { url: imageUrl });
             setMenuItems(response.data.menu_items);
         } catch (err) {
-            setError('Failed to infer menu. Please try again.');
+            if (axios.isAxiosError(err) && err.response) {
+                if (err.response.status === 400) {
+                    setError(`Invalid image URL: ${err.response.data.error}`);
+                } else if (err.response.status === 422) {
+                    setError(`Validation error: ${err.response.data.error}`);
+                } else {
+                    setError(`Failed to infer menu: ${err.response.data.error || err.message}`);
+                }
+            } else {
+                setError('Failed to infer menu. Please try again.');
+            }
             console.error(err);
         } finally {
             setLoading(false);
@@ -34,9 +45,9 @@ const MenuInference: React.FC = () => {
                 type="text"
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="Enter image URL"
+                placeholder="Enter image URL (jpg, jpeg, png, or webp)"
             />
-            <button onClick={inferMenu} disabled={loading}>
+            <button onClick={inferMenu} disabled={loading || !imageUrl}>
                 {loading ? 'Inferring...' : 'Infer Menu'}
             </button>
             {error && <p className="error">{error}</p>}
@@ -45,9 +56,10 @@ const MenuInference: React.FC = () => {
                     <h3>Inferred Menu Items:</h3>
                     <ul>
                         {menuItems.map((item, index) => (
-                            <li key={index}>
+                            <li key={index} className="menu-item">
                                 <strong>{item.name}</strong> - {item.price}
-                                {item.description && <p>{item.description}</p>}
+                                {item.category && <span className="category"> ({item.category})</span>}
+                                {item.description && <p className="description">{item.description}</p>}
                             </li>
                         ))}
                     </ul>
