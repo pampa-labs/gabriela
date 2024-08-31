@@ -1,36 +1,52 @@
 import json
-import os
-from enum import Enum
-from typing import Dict, List
+from typing import List, Optional
 
 from fastapi import HTTPException
-from openai import OpenAI
-from pydantic import BaseModel
+from openai import OpenAI, OpenAIError
+from pydantic import BaseModel, Field, validator
 
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+from app.config import settings
+
+client = OpenAI(api_key=settings.OPENAI_API_KEY)
 
 
 class MenuItem(BaseModel):
     name: str
-    description: str = None
+    description: Optional[str] = Field(
+        None, description="Optional description of the menu item"
+    )
     price: str
+    category: Optional[str] = Field(
+        None,
+        description="Category of the menu item, e.g., 'Appetizer', 'Main Course', etc.",
+    )
+
+    @validator("price")
+    def validate_price(cls, v):
+        if not v.replace(".", "").isdigit():
+            raise ValueError("Price must be a valid number")
+        return v
 
 
 class MenuResponse(BaseModel):
     menu_items: List[MenuItem]
 
 
-def infer_menu_from_image(image_url: str) -> List[Dict[str, str]]:
+def infer_menu_from_image(image_url: str) -> List[MenuItem]:
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-2024-08-06",
+        completion = client.chat.completions.create(
+            model="gpt-4-vision-preview",
             messages=[
+                {
+                    "role": "system",
+                    "content": "You are a menu analysis expert. Analyze images of menus and extract structured information about menu items, including their category if possible. Ensure prices are in a consistent format.",
+                },
                 {
                     "role": "user",
                     "content": [
                         {
                             "type": "text",
-                            "text": "Analyze this image of a menu and return a structured JSON list of menu items. Each item should include 'name', 'description' (if available), and 'price'.",
+                            "text": "Analyze this image of a menu and extract the menu items. Include the category for each item if you can determine it. Ensure prices are in a consistent format (e.g., $X.XX).",
                         },
                         {
                             "type": "image_url",
@@ -39,15 +55,16 @@ def infer_menu_from_image(image_url: str) -> List[Dict[str, str]]:
                             },
                         },
                     ],
-                }
+                },
             ],
-            max_tokens=1000,
+            max_tokens=1500,
             response_format={"type": "json_object"},
         )
 
-        # Parse the JSON response
-        menu_response = MenuResponse.parse_raw(response.choices[0].message.content)
+        menu_response = MenuResponse.parse_raw(completion.choices[0].message.content)
         return menu_response.menu_items
+    except OpenAIError as e:
+        raise HTTPException(status_code=503, detail=f"OpenAI service error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error inferring menu: {str(e)}")
 
