@@ -1,17 +1,29 @@
 import json
 import os
+from enum import Enum
 from typing import Dict, List
 
 from fastapi import HTTPException
 from openai import OpenAI
+from pydantic import BaseModel
 
 client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+
+class MenuItem(BaseModel):
+    name: str
+    description: str = None
+    price: str
+
+
+class MenuResponse(BaseModel):
+    menu_items: List[MenuItem]
 
 
 def infer_menu_from_image(image_url: str) -> List[Dict[str, str]]:
     try:
         response = client.chat.completions.create(
-            model="gpt-4o",
+            model="gpt-4o-2024-08-06",
             messages=[
                 {
                     "role": "user",
@@ -34,8 +46,8 @@ def infer_menu_from_image(image_url: str) -> List[Dict[str, str]]:
         )
 
         # Parse the JSON response
-        menu_items = json.loads(response.choices[0].message.content)
-        return menu_items.get("menu_items", [])
+        menu_response = MenuResponse.parse_raw(response.choices[0].message.content)
+        return menu_response.menu_items
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error inferring menu: {str(e)}")
 
@@ -44,4 +56,4 @@ def infer_menu_from_image(image_url: str) -> List[Dict[str, str]]:
 if __name__ == "__main__":
     image_url = "https://example.com/path/to/menu_image.jpg"
     menu = infer_menu_from_image(image_url)
-    print(json.dumps(menu, indent=2))
+    print(json.dumps([item.dict() for item in menu], indent=2))
