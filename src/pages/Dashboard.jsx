@@ -4,9 +4,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, Trash2, Upload, Check } from 'lucide-react';
+import { PlusCircle, Trash2, Upload, Check, Send, Mail } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "@/components/ui/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 const Dashboard = () => {
   const [userRole, setUserRole] = useState('admin');
@@ -16,6 +25,7 @@ const Dashboard = () => {
   const [menuItems, setMenuItems] = useState([]);
   const [newItem, setNewItem] = useState({ name: '', price: '', image: null });
   const [menuImage, setMenuImage] = useState(null);
+  const [emailList, setEmailList] = useState('');
 
   useEffect(() => {
     const savedMenu = localStorage.getItem('restaurantMenu');
@@ -106,12 +116,28 @@ const Dashboard = () => {
     }
   };
 
+  const sendMenu = () => {
+    // Implement the logic to send the menu (e.g., via API)
+    toast({
+      title: "Menu Sent",
+      description: "The menu has been sent to the team.",
+    });
+  };
+
+  const sendEmails = () => {
+    // Implement the logic to send emails (e.g., via API)
+    toast({
+      title: "Emails Sent",
+      description: "Invitations have been sent to the team members.",
+    });
+  };
+
   return (
-    <div className="container mx-auto p-4 bg-gradient-to-r from-blue-50 to-indigo-50 min-h-screen">
-      <h1 className="text-4xl font-bold mb-6 text-center text-indigo-900">Order Dashboard</h1>
+    <div className="container mx-auto p-4 bg-gray-50 min-h-screen">
+      <h1 className="text-4xl font-bold mb-6 text-center text-gray-800">Order Dashboard</h1>
       <Button 
         onClick={() => setUserRole(userRole === 'admin' ? 'team' : 'admin')} 
-        className="mb-4 bg-indigo-600 hover:bg-indigo-700 text-white"
+        className="mb-4 bg-gray-600 hover:bg-gray-700 text-white"
       >
         Toggle Role (Current: {userRole})
       </Button>
@@ -124,15 +150,15 @@ const Dashboard = () => {
 
         {userRole === 'admin' && (
           <TabsContent value="admin">
-            <Card className="bg-white shadow-lg border-t-4 border-indigo-500">
+            <Card className="bg-white shadow-lg border-t-4 border-gray-500">
               <CardHeader>
-                <CardTitle className="text-2xl text-indigo-900">Admin Controls</CardTitle>
+                <CardTitle className="text-2xl text-gray-800">Admin Controls</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex space-x-4">
                   <Button 
                     onClick={requestOrder} 
-                    className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
                     disabled={orderRequested}
                   >
                     {orderRequested ? "Order Requested" : "Request Order"}
@@ -140,7 +166,7 @@ const Dashboard = () => {
                   <Button 
                     onClick={startOrder} 
                     disabled={!orderRequested || orderStarted} 
-                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                    className="flex-1 bg-green-500 hover:bg-green-600 text-white"
                   >
                     {orderStarted ? "Order Started" : "Start Order"}
                   </Button>
@@ -192,9 +218,35 @@ const Dashboard = () => {
                       className="w-full"
                     />
                   </div>
-                  <Button onClick={handleAddMenuItem} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white text-sm py-2">
+                  <Button onClick={handleAddMenuItem} className="w-full bg-gray-500 hover:bg-gray-600 text-white text-sm py-2">
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Menu Item
                   </Button>
+                  <Button onClick={sendMenu} className="w-full bg-yellow-500 hover:bg-yellow-600 text-white text-sm py-2">
+                    <Send className="mr-2 h-4 w-4" /> Send Menu
+                  </Button>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button className="w-full bg-purple-500 hover:bg-purple-600 text-white text-sm py-2">
+                        <Mail className="mr-2 h-4 w-4" /> Send Invitations
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Send Invitations</DialogTitle>
+                        <DialogDescription>
+                          Enter email addresses separated by commas.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <Textarea
+                          placeholder="email1@example.com, email2@example.com"
+                          value={emailList}
+                          onChange={(e) => setEmailList(e.target.value)}
+                        />
+                      </div>
+                      <Button onClick={sendEmails}>Send Invitations</Button>
+                    </DialogContent>
+                  </Dialog>
                 </div>
               </CardContent>
             </Card>
@@ -202,9 +254,9 @@ const Dashboard = () => {
         )}
 
         <TabsContent value="menu">
-          <Card className="bg-white shadow-lg border-t-4 border-indigo-500">
+          <Card className="bg-white shadow-lg border-t-4 border-gray-500">
             <CardHeader>
-              <CardTitle className="text-2xl text-indigo-900">Restaurant Menu</CardTitle>
+              <CardTitle className="text-2xl text-gray-800">Restaurant Menu</CardTitle>
             </CardHeader>
             <CardContent>
               {menuImage && (
@@ -214,7 +266,7 @@ const Dashboard = () => {
               )}
               <RadioGroup value={selectedItem} onValueChange={handleItemSelect} className="space-y-4">
                 {menuItems.map(item => (
-                  <div key={item.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg shadow hover:bg-gray-100 transition-colors">
+                  <div key={item.id} className="flex items-center justify-between p-4 bg-gray-100 rounded-lg shadow hover:bg-gray-200 transition-colors">
                     <div className="flex items-center space-x-4 flex-1">
                       {item.image && (
                         <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-full" />
