@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PlusCircle, Trash2, Upload } from 'lucide-react';
-import { Checkbox } from "@/components/ui/checkbox";
+import { PlusCircle, Trash2, Upload, Check } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { toast } from "@/components/ui/use-toast";
 
 const Dashboard = () => {
   const [userRole, setUserRole] = useState('admin');
-  const [selectedItems, setSelectedItems] = useState([]);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [orderRequested, setOrderRequested] = useState(false);
   const [orderStarted, setOrderStarted] = useState(false);
   const [menuItems, setMenuItems] = useState([]);
   const [newItem, setNewItem] = useState({ name: '', price: '', image: null });
@@ -28,18 +29,38 @@ const Dashboard = () => {
   }, []);
 
   const handleItemSelect = (itemId) => {
-    setSelectedItems(prev => {
-      if (prev.includes(itemId)) {
-        return prev.filter(id => id !== itemId);
-      } else {
-        return [...prev, itemId];
-      }
+    setSelectedItem(itemId);
+  };
+
+  const requestOrder = () => {
+    setOrderRequested(true);
+    toast({
+      title: "Order Requested",
+      description: "Team members can now select their orders.",
     });
   };
 
   const startOrder = () => {
     setOrderStarted(true);
-    console.log("WhatsApp agent spawned to make the order");
+    toast({
+      title: "Order Started",
+      description: "WhatsApp agent spawned to make the order.",
+    });
+  };
+
+  const confirmOrder = () => {
+    if (selectedItem) {
+      toast({
+        title: "Order Confirmed",
+        description: `Your order for ${menuItems.find(item => item.id === selectedItem).name} has been confirmed.`,
+      });
+    } else {
+      toast({
+        title: "Order Error",
+        description: "Please select an item before confirming your order.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAddMenuItem = () => {
@@ -48,6 +69,10 @@ const Dashboard = () => {
       setMenuItems(updatedMenu);
       localStorage.setItem('restaurantMenu', JSON.stringify(updatedMenu));
       setNewItem({ name: '', price: '', image: null });
+      toast({
+        title: "Menu Item Added",
+        description: `${newItem.name} has been added to the menu.`,
+      });
     }
   };
 
@@ -55,6 +80,10 @@ const Dashboard = () => {
     const updatedMenu = menuItems.filter(item => item.id !== id);
     setMenuItems(updatedMenu);
     localStorage.setItem('restaurantMenu', JSON.stringify(updatedMenu));
+    toast({
+      title: "Menu Item Removed",
+      description: "The selected item has been removed from the menu.",
+    });
   };
 
   const handleImageUpload = (e, type) => {
@@ -65,6 +94,10 @@ const Dashboard = () => {
         if (type === 'menu') {
           setMenuImage(reader.result);
           localStorage.setItem('menuImage', reader.result);
+          toast({
+            title: "Menu Image Uploaded",
+            description: "The full menu image has been updated.",
+          });
         } else {
           setNewItem(prev => ({ ...prev, image: reader.result }));
         }
@@ -74,30 +107,41 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 bg-gray-50 min-h-screen">
-      <h1 className="text-4xl font-bold mb-6 text-center text-gray-800">Order Dashboard</h1>
-      <Button onClick={() => setUserRole(userRole === 'admin' ? 'team' : 'admin')} className="mb-4 bg-purple-600 hover:bg-purple-700">
+    <div className="container mx-auto p-4 bg-gradient-to-r from-blue-50 to-indigo-50 min-h-screen">
+      <h1 className="text-4xl font-bold mb-6 text-center text-indigo-900">Order Dashboard</h1>
+      <Button 
+        onClick={() => setUserRole(userRole === 'admin' ? 'team' : 'admin')} 
+        className="mb-4 bg-indigo-600 hover:bg-indigo-700 text-white"
+      >
         Toggle Role (Current: {userRole})
       </Button>
       
       <Tabs defaultValue={userRole === 'admin' ? 'admin' : 'menu'} className="mb-6">
-        <TabsList className="w-full">
+        <TabsList className="w-full bg-white shadow-md">
           {userRole === 'admin' && <TabsTrigger value="admin" className="w-1/2">Admin Controls</TabsTrigger>}
           <TabsTrigger value="menu" className={userRole === 'admin' ? 'w-1/2' : 'w-full'}>Menu</TabsTrigger>
         </TabsList>
 
         {userRole === 'admin' && (
           <TabsContent value="admin">
-            <Card className="bg-white shadow-lg">
+            <Card className="bg-white shadow-lg border-t-4 border-indigo-500">
               <CardHeader>
-                <CardTitle className="text-2xl text-gray-700">Admin Controls</CardTitle>
+                <CardTitle className="text-2xl text-indigo-900">Admin Controls</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex space-x-4">
-                  <Button onClick={() => alert("Request for order sent to team members")} className="flex-1 bg-green-500 hover:bg-green-600">
-                    Send Request for Order
+                  <Button 
+                    onClick={requestOrder} 
+                    className="flex-1 bg-green-500 hover:bg-green-600 text-white"
+                    disabled={orderRequested}
+                  >
+                    {orderRequested ? "Order Requested" : "Request Order"}
                   </Button>
-                  <Button onClick={startOrder} disabled={orderStarted} className="flex-1 bg-blue-500 hover:bg-blue-600">
+                  <Button 
+                    onClick={startOrder} 
+                    disabled={!orderRequested || orderStarted} 
+                    className="flex-1 bg-blue-500 hover:bg-blue-600 text-white"
+                  >
                     {orderStarted ? "Order Started" : "Start Order"}
                   </Button>
                 </div>
@@ -148,7 +192,7 @@ const Dashboard = () => {
                       className="w-full"
                     />
                   </div>
-                  <Button onClick={handleAddMenuItem} className="w-full bg-indigo-500 hover:bg-indigo-600">
+                  <Button onClick={handleAddMenuItem} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white text-sm py-2">
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Menu Item
                   </Button>
                 </div>
@@ -158,9 +202,9 @@ const Dashboard = () => {
         )}
 
         <TabsContent value="menu">
-          <Card className="bg-white shadow-lg">
+          <Card className="bg-white shadow-lg border-t-4 border-indigo-500">
             <CardHeader>
-              <CardTitle className="text-2xl text-gray-700">Restaurant Menu</CardTitle>
+              <CardTitle className="text-2xl text-indigo-900">Restaurant Menu</CardTitle>
             </CardHeader>
             <CardContent>
               {menuImage && (
@@ -168,31 +212,37 @@ const Dashboard = () => {
                   <img src={menuImage} alt="Full Menu" className="w-full h-auto object-cover rounded-lg shadow-md" />
                 </div>
               )}
-              <div className="space-y-4">
+              <RadioGroup value={selectedItem} onValueChange={handleItemSelect} className="space-y-4">
                 {menuItems.map(item => (
-                  <div key={item.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg shadow">
-                    <div className="flex items-center space-x-4">
+                  <div key={item.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg shadow hover:bg-gray-100 transition-colors">
+                    <div className="flex items-center space-x-4 flex-1">
                       {item.image && (
                         <img src={item.image} alt={item.name} className="w-16 h-16 object-cover rounded-full" />
                       )}
-                      <div>
+                      <div className="flex-1">
                         <h3 className="text-lg font-semibold text-gray-800">{item.name}</h3>
                         <p className="text-gray-600">${item.price}</p>
                       </div>
                     </div>
                     {userRole === 'admin' ? (
-                      <Button variant="destructive" size="icon" onClick={() => handleRemoveMenuItem(item.id)}>
+                      <Button variant="destructive" size="icon" onClick={() => handleRemoveMenuItem(item.id)} className="ml-2">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     ) : (
-                      <Checkbox
-                        checked={selectedItems.includes(item.id)}
-                        onCheckedChange={() => handleItemSelect(item.id)}
-                      />
+                      <RadioGroupItem value={item.id} id={`item-${item.id}`} className="ml-2" />
                     )}
                   </div>
                 ))}
-              </div>
+              </RadioGroup>
+              {userRole !== 'admin' && orderRequested && !orderStarted && (
+                <Button 
+                  onClick={confirmOrder} 
+                  className="mt-6 w-full bg-green-500 hover:bg-green-600 text-white"
+                  disabled={!selectedItem}
+                >
+                  <Check className="mr-2 h-4 w-4" /> Confirm Order
+                </Button>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
