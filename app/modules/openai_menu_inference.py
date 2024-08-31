@@ -4,22 +4,16 @@ from typing import List, Optional
 from fastapi import HTTPException
 from openai import OpenAI, OpenAIError
 from pydantic import BaseModel, Field, validator
+from settings import logger
 
-from app.config import settings
-
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+client = OpenAI()
 
 
 class MenuItem(BaseModel):
-    name: str
-    description: Optional[str] = Field(
-        None, description="Optional description of the menu item"
-    )
-    price: str
-    category: Optional[str] = Field(
-        None,
-        description="Category of the menu item, e.g., 'Appetizer', 'Main Course', etc.",
-    )
+    name: Optional[str] = None
+    description: Optional[str] = None
+    price: Optional[str] = None
+    category: Optional[str] = None
 
     @validator("price")
     def validate_price(cls, v):
@@ -35,7 +29,7 @@ class MenuResponse(BaseModel):
 def infer_menu_from_image(image_url: str) -> List[MenuItem]:
     try:
         completion = client.chat.completions.create(
-            model="gpt-4-vision-preview",
+            model="gpt-4o",
             messages=[
                 {
                     "role": "system",
@@ -61,11 +55,17 @@ def infer_menu_from_image(image_url: str) -> List[MenuItem]:
             response_format={"type": "json_object"},
         )
 
+        logger.info(
+            f"OpenAI completion output: {completion.choices[0].message.content}"
+        )
+
         menu_response = MenuResponse.parse_raw(completion.choices[0].message.content)
         return menu_response.menu_items
     except OpenAIError as e:
+        logger.error(f"OpenAI service error: {str(e)}")
         raise HTTPException(status_code=503, detail=f"OpenAI service error: {str(e)}")
     except Exception as e:
+        logger.error(f"Error inferring menu: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error inferring menu: {str(e)}")
 
 
@@ -73,4 +73,4 @@ def infer_menu_from_image(image_url: str) -> List[MenuItem]:
 if __name__ == "__main__":
     image_url = "https://example.com/path/to/menu_image.jpg"
     menu = infer_menu_from_image(image_url)
-    print(json.dumps([item.dict() for item in menu], indent=2))
+    logger.info(json.dumps([item.dict() for item in menu], indent=2))
