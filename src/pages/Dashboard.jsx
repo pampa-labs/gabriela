@@ -24,9 +24,13 @@ const Dashboard = () => {
   const [selectedItem, setSelectedItem] = useState(null);
   const [orderStarted, setOrderStarted] = useState(false);
   const [menuItems, setMenuItems] = useState([]);
-  const [newItem, setNewItem] = useState({ name: '', price: '', image: null });
+  const [newItem, setNewItem] = useState({ name: '', price: '', image: null, description: '' });
   const [menuImage, setMenuImage] = useState(null);
   const [invitationLink, setInvitationLink] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [orders, setOrders] = useState([]);
 
   useEffect(() => {
     const savedMenu = localStorage.getItem('restaurantMenu');
@@ -70,15 +74,37 @@ const Dashboard = () => {
     }
   };
 
+  const handleLogin = () => {
+    if (username === 'test' && password === 'test') {
+      setIsLoggedIn(true);
+      toast({
+        title: "Logged In",
+        description: "Welcome to the dashboard.",
+      });
+    } else {
+      toast({
+        title: "Login Failed",
+        description: "Invalid credentials.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleAddMenuItem = () => {
     if (newItem.name && newItem.price) {
       const updatedMenu = [...menuItems, { ...newItem, id: Date.now() }];
       setMenuItems(updatedMenu);
       localStorage.setItem('restaurantMenu', JSON.stringify(updatedMenu));
-      setNewItem({ name: '', price: '', image: null });
+      setNewItem({ name: '', price: '', image: null, description: '' });
       toast({
         title: "Menu Item Added",
         description: `${newItem.name} has been added to the menu.`,
+      });
+    } else {
+      toast({
+        title: "Invalid Input",
+        description: "Name and price are required.",
+        variant: "destructive",
       });
     }
   };
@@ -130,15 +156,53 @@ const Dashboard = () => {
     });
   };
 
+  const sendOrderToRestaurant = () => {
+    // Mock sending order to restaurant
+    toast({
+      title: "Order Sent",
+      description: "The order has been sent to the restaurant.",
+    });
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="container mx-auto p-4 flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Login</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="username">Username</Label>
+                <Input
+                  id="username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              <Button onClick={handleLogin} className="w-full">
+                Login
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto p-4 bg-gradient-to-b from-gray-50 to-gray-100 min-h-screen">
       <h1 className="text-5xl font-bold mb-8 text-center text-gray-800 tracking-tight">Order Dashboard</h1>
-      <Button 
-        onClick={() => setUserRole(userRole === 'admin' ? 'team' : 'admin')} 
-        className="mb-6 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
-      >
-        Toggle Role (Current: {userRole})
-      </Button>
       
       <Tabs defaultValue={userRole === 'admin' ? 'admin' : 'menu'} className="mb-8">
         <TabsList className="w-full bg-white shadow-md rounded-lg overflow-hidden">
@@ -172,17 +236,18 @@ const Dashboard = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-6">
                     <div>
-                      <Label htmlFor="itemName" className="block text-lg font-medium text-gray-700 mb-2">Item Name</Label>
+                      <Label htmlFor="itemName" className="block text-lg font-medium text-gray-700 mb-2">Item Name *</Label>
                       <Input
                         id="itemName"
                         value={newItem.name}
                         onChange={(e) => setNewItem(prev => ({ ...prev, name: e.target.value }))}
                         placeholder="Enter item name"
                         className="w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        required
                       />
                     </div>
                     <div>
-                      <Label htmlFor="itemPrice" className="block text-lg font-medium text-gray-700 mb-2">Item Price</Label>
+                      <Label htmlFor="itemPrice" className="block text-lg font-medium text-gray-700 mb-2">Item Price *</Label>
                       <Input
                         id="itemPrice"
                         type="number"
@@ -190,11 +255,22 @@ const Dashboard = () => {
                         onChange={(e) => setNewItem(prev => ({ ...prev, price: e.target.value }))}
                         placeholder="Enter item price"
                         className="w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                        required
                       />
                     </div>
                   </div>
                   <div>
-                    <Label htmlFor="itemImage" className="block text-lg font-medium text-gray-700 mb-2">Item Image</Label>
+                    <Label htmlFor="itemDescription" className="block text-lg font-medium text-gray-700 mb-2">Item Description (Optional)</Label>
+                    <Textarea
+                      id="itemDescription"
+                      value={newItem.description}
+                      onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+                      placeholder="Enter item description"
+                      className="w-full py-2 px-3 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="itemImage" className="block text-lg font-medium text-gray-700 mb-2">Item Image (Optional)</Label>
                     <Input
                       id="itemImage"
                       type="file"
@@ -267,15 +343,6 @@ const Dashboard = () => {
                   <Check className="mr-2 h-6 w-6" /> Confirm Order
                 </Button>
               )}
-              {userRole === 'admin' && (
-                <Button 
-                  onClick={startOrder} 
-                  className="mt-8 w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
-                  disabled={orderStarted}
-                >
-                  <Send className="mr-2 h-6 w-6" /> {orderStarted ? "Order Sent to Restaurant" : "Send Order to Restaurant"}
-                </Button>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -287,11 +354,25 @@ const Dashboard = () => {
                 <CardTitle className="text-3xl font-bold text-gray-800">Confirmed Orders</CardTitle>
               </CardHeader>
               <CardContent>
+                {orders.length > 0 ? (
+                  <div className="space-y-4">
+                    {orders.map((order, index) => (
+                      <div key={index} className="p-4 bg-white rounded-lg shadow">
+                        <h3 className="font-semibold">Order #{order.id}</h3>
+                        <p>Item: {order.item.name}</p>
+                        <p>Price: ${order.item.price}</p>
+                        <p>User: {order.user}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p>No orders to display.</p>
+                )}
                 <Button 
-                  onClick={() => navigate('/admin/orders')} 
-                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
+                  onClick={sendOrderToRestaurant} 
+                  className="mt-4 w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 px-6 rounded-xl shadow-lg transition duration-300 ease-in-out transform hover:-translate-y-1 hover:scale-105"
                 >
-                  <Eye className="mr-2 h-6 w-6" /> View All Orders
+                  <Send className="mr-2 h-6 w-6" /> Send Order to Restaurant
                 </Button>
               </CardContent>
             </Card>
