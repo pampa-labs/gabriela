@@ -14,9 +14,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -31,17 +33,40 @@ const Dashboard = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showDialog, setShowDialog] = useState(false);
+  const [dialogContent, setDialogContent] = useState({ title: '', description: '' });
 
   useEffect(() => {
-    const savedMenu = localStorage.getItem('restaurantMenu');
-    if (savedMenu) {
-      setMenuItems(JSON.parse(savedMenu));
-    }
-    const savedMenuImage = localStorage.getItem('menuImage');
-    if (savedMenuImage) {
-      setMenuImage(savedMenuImage);
-    }
+    fetchMenuItems();
   }, []);
+
+  const fetchMenuItems = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('menu_items')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      if (data) {
+        setMenuItems(data);
+      } else {
+        setMenuItems([]);
+      }
+    } catch (error) {
+      console.error('Error fetching menu items:', error);
+      toast({
+        title: "Error",
+        description: `Failed to fetch menu items: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleItemSelect = (itemId) => {
     setSelectedItem(itemId);
@@ -90,52 +115,120 @@ const Dashboard = () => {
     }
   };
 
-  const handleAddMenuItem = () => {
+  const handleAddMenuItem = async () => {
     if (newItem.name && newItem.price) {
-      const updatedMenu = [...menuItems, { ...newItem, id: Date.now() }];
-      setMenuItems(updatedMenu);
-      localStorage.setItem('restaurantMenu', JSON.stringify(updatedMenu));
-      setNewItem({ name: '', price: '', image: null, description: '' });
-      toast({
-        title: "Menu Item Added",
-        description: `${newItem.name} has been added to the menu.`,
-      });
+      try {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from('menu_items')
+          .insert([
+            { 
+              name: newItem.name, 
+              price: parseFloat(newItem.price),
+              description: newItem.description || null,
+              image: newItem.image || null
+            }
+          ])
+          .select();
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          setMenuItems(prevItems => [...prevItems, data[0]]);
+          setNewItem({ name: '', price: '', image: null, description: '' });
+          setDialogContent({
+            title: "Success",
+            description: `${data[0].name} has been added to the menu.`
+          });
+        } else {
+          throw new Error('No data returned from insert operation');
+        }
+      } catch (error) {
+        console.error('Error adding menu item:', error);
+        setDialogContent({
+          title: "Error",
+          description: `Failed to add menu item: ${error.message}`
+        });
+      } finally {
+        setLoading(false);
+        setShowDialog(true);
+      }
     } else {
-      toast({
+      setDialogContent({
         title: "Invalid Input",
-        description: "Name and price are required.",
-        variant: "destructive",
+        description: "Name and price are required."
       });
+      setShowDialog(true);
     }
   };
 
-  const handleRemoveMenuItem = (id) => {
-    const updatedMenu = menuItems.filter(item => item.id !== id);
-    setMenuItems(updatedMenu);
-    localStorage.setItem('restaurantMenu', JSON.stringify(updatedMenu));
-    toast({
-      title: "Menu Item Removed",
-      description: "The selected item has been removed from the menu.",
-    });
+  const handleRemoveMenuItem = async (id) => {
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('menu_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setMenuItems(prevItems => prevItems.filter(item => item.id !== id));
+      toast({
+        title: "Menu Item Removed",
+        description: "The selected item has been removed from the menu.",
+      });
+    } catch (error) {
+      console.error('Error removing menu item:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove menu item.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleImageUpload = (e, type) => {
+  const handleImageUpload = async (e, type) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
+      try {
+        setLoading(true);
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const { data, error: uploadError } = await supabase.storage
+          .from('menu-images')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl }, error: urlError } = supabase.storage
+          .from('menu-images')
+          .getPublicUrl(data.path);
+
+        if (urlError) throw urlError;
+
         if (type === 'menu') {
-          setMenuImage(reader.result);
-          localStorage.setItem('menuImage', reader.result);
-          toast({
-            title: "Menu Image Uploaded",
-            description: "The full menu image has been updated.",
-          });
+          setMenuImage(publicUrl);
+          // You might want to store this URL in Supabase as well if needed
         } else {
-          setNewItem(prev => ({ ...prev, image: reader.result }));
+          setNewItem(prev => ({ ...prev, image: publicUrl }));
         }
-      };
-      reader.readAsDataURL(file);
+
+        toast({
+          title: "Image Uploaded",
+          description: type === 'menu' ? "The full menu image has been updated." : "Item image has been uploaded.",
+        });
+      } catch (error) {
+        console.error('Error uploading image:', error);
+        toast({
+          title: "Error",
+          description: "Failed to upload image.",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -322,6 +415,7 @@ const Dashboard = () => {
                       <div className="flex-1">
                         <h3 className="text-2xl font-semibold text-gray-800 mb-1">{item.name}</h3>
                         <p className="text-xl text-indigo-600 font-bold">${item.price}</p>
+                        {item.description && <p className="text-gray-600">{item.description}</p>}
                       </div>
                     </div>
                     {userRole === 'admin' ? (
@@ -379,6 +473,19 @@ const Dashboard = () => {
           </TabsContent>
         )}
       </Tabs>
+      {loading && <div>Loading...</div>}
+      
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{dialogContent.title}</DialogTitle>
+            <DialogDescription>{dialogContent.description}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowDialog(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
