@@ -1,2 +1,5 @@
 .env
 /gabriela-env
+__pycache__/
+*.py[cod]
+*$py.class
