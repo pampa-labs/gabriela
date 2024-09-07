@@ -1,23 +1,28 @@
-from langchain_core.messages import HumanMessage, AIMessage
-from langgraph.graph import END, StateGraph, MessagesState
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+from langgraph.graph import END, StateGraph 
 from langgraph.checkpoint.memory import MemorySaver
 from state import AgentState
 from typing import List, Literal
 from langchain_core.tools import Tool
 from langgraph.prebuilt import ToolNode
 from langchain_openai import ChatOpenAI
-from pampa_tools import TeamMembersTool
+from pampa_tools import ExpenseTrackerTool, GETExpenseTrackerTool
 from dotenv import load_dotenv
+from prompt import AGENT_PROMPT
+from jinja2 import Template
 
 load_dotenv()
 
 class Agent:
-    def __init__(self, model_name: str = "gpt-4o", tools: List[Tool] = [TeamMembersTool()]):
+    def __init__(self, prompt: Template = AGENT_PROMPT, model_name: str = "gpt-4o", tools: List[Tool] = [ExpenseTrackerTool(), GETExpenseTrackerTool()]):
+        self._prompt =  prompt
         self._model = ChatOpenAI(model_name=model_name).bind_tools(tools)
         self._tools = tools
         self._build_graph()
 
     def _call_model(self, state: AgentState) -> dict:
+        if not state['messages']:
+            return {"messages": [SystemMessage(content=self.prompt.render())]}
         try:
             response = self._model.invoke(state['messages'])
             return {"messages": [response]}
