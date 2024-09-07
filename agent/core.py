@@ -1,5 +1,5 @@
 from typing import Dict, Any
-from agent import Agent
+from agent_principal import Agent
 
 class WhatsAppAgent:
     def __init__(self):
