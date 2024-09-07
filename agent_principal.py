@@ -10,7 +10,7 @@ from pampa_tools import TeamMembersTool
 from dotenv import load_dotenv
 from utils import setup_env
 
-setup_env("../.env")
+#setup_env("../.env")
 load_dotenv()
 
 class Agent:

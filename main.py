@@ -3,7 +3,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
-from agent.core import WhatsappAgent
+from core import WhatsappAgent
 
 
 # Cargar variables de entorno desde el archivo .env
