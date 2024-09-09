@@ -5,4 +5,3 @@ from operator import add
 
 class AgentState(TypedDict):
     messages: Annotated[List[BaseMessage], add]
-

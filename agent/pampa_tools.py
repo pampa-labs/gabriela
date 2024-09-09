@@ -1,9 +1,10 @@
 from langchain.tools import BaseTool
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 import json
 import requests
 from langchain_core.messages import FunctionMessage
+
 class TeamMembersTool(BaseTool):
     name = "team"
     description = "Retrieves the current list of team members in the organization."
@@ -51,6 +52,12 @@ class ExpenseTrackerTool(BaseTool):
 class ExpenseQuery(BaseModel):
     query: str
 
+class ExpenseEntry(BaseModel):
+    persona: str = Field(..., alias="0")
+    descripcion_gasto: str = Field(..., alias="1")
+    fecha: str = Field(..., alias="2")
+    valor_total: float = Field(..., alias="3")
+
 class GETExpenseTrackerTool(BaseTool):
     name = "get_expenses"
     description = "Retrieves expenses based on a query."
@@ -60,4 +67,13 @@ class GETExpenseTrackerTool(BaseTool):
     def _run(self, query: str):
         """Retrieves expenses based on the provided query."""
         response = requests.get(f"{self.URL}?text={query}")
-        return {"messages": FunctionMessage(name=self.__class__.__name__, content=f"Webhook response: {response.status_code} - {response.text}")}
+        if response.status_code == 200:
+            data = json.loads(response.text)
+            try:
+                expenses = [ExpenseEntry.parse_obj(item) for item in data[1:]]  # Skip header
+                expenses_json = json.dumps([expense.dict() for expense in expenses], ensure_ascii=False)
+                return FunctionMessage(name=self.__class__.__name__, content=expenses_json)
+            except ValueError as e:
+                return FunctionMessage(name=self.__class__.__name__, content=f"Error parsing response: {str(e)}")
+        else:
+            return FunctionMessage(name=self.__class__.__name__, content=f"Error: {response.status_code} - {response.text}")
