@@ -1,9 +1,10 @@
 from langchain.tools import BaseTool
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Dict
 import json
 import requests
 from langchain_core.messages import FunctionMessage
+from .storage import StorageStrategy, TinyDBStorage
 
 class TeamMembersTool(BaseTool):
     name = "team"
@@ -24,56 +25,62 @@ class TeamMembersTool(BaseTool):
 
 
 class Expense(BaseModel):
-    persona: str
-    tipo_gasto: str
-    fecha: str
-    valor_total: float
+    person: str
+    expense_type: str
+    date: str
+    total_value: float
 
 class ExpenseTrackerTool(BaseTool):
     name = "expense_tracker"
     description = "Tracks expenses for team members."
     args_schema = Expense
-    URL = "https://hook.us2.make.com/jnvfsmjcyj5vpws40cw00f13polugkla"
+    storage: StorageStrategy = TinyDBStorage()
 
-    def _run(self, persona: str, tipo_gasto: str, fecha: str, valor_total: float):
+
+    def _run(self, person: str, expense_type: str, date: str, total_value: float):
         """Adds a new expense to the tracker."""
 
-        data = json.dumps({
-            "persona": persona,
-            "tipo_gasto": tipo_gasto,
-            "fecha": fecha,
-            "valor_total": valor_total
-        })
+        expense = {
+            "id": person, #TODO id
+            "expense_type": expense_type,
+            "date": date,
+            "total_value": total_value,
+            "state": "pending"
+        }
 
-        """Sends a POST request to the webhook endpoint."""
-        response = requests.post(self.URL, data=data, headers={'Content-Type': 'application/json'})
-        return {"messages": FunctionMessage(name=self.__class__.__name__, content=f"Webhook response: {response.status_code} - {response.text}")}
-    
+        try:
+            self.storage.add_expense(expense)
+            return FunctionMessage(name=self.__class__.__name__, content="Expense added successfully")
+        except Exception as e:
+            return FunctionMessage(name=self.__class__.__name__, content=f"Error adding expense: {str(e)}")
+
 class ExpenseQuery(BaseModel):
     query: str
-
-class ExpenseEntry(BaseModel):
-    persona: str = Field(..., alias="0")
-    descripcion_gasto: str = Field(..., alias="1")
-    fecha: str = Field(..., alias="2")
-    valor_total: float = Field(..., alias="3")
 
 class GETExpenseTrackerTool(BaseTool):
     name = "get_expenses"
     description = "Retrieves expenses based on a query."
     args_schema = ExpenseQuery
-    URL = "https://hook.us2.make.com/wfmhytz9iyo2mfm8fev7bwp1n3sp1tf7"
+    storage: StorageStrategy = TinyDBStorage()
 
-    def _run(self, query: str):
+    def _run(self, query, config):
         """Retrieves expenses based on the provided query."""
-        response = requests.get(f"{self.URL}?text={query}")
-        if response.status_code == 200:
-            data = json.loads(response.text)
-            try:
-                expenses = [ExpenseEntry.parse_obj(item) for item in data[1:]]  # Skip header
-                expenses_json = json.dumps([expense.dict() for expense in expenses], ensure_ascii=False)
-                return FunctionMessage(name=self.__class__.__name__, content=expenses_json)
-            except ValueError as e:
-                return FunctionMessage(name=self.__class__.__name__, content=f"Error parsing response: {str(e)}")
-        else:
-            return FunctionMessage(name=self.__class__.__name__, content=f"Error: {response.status_code} - {response.text}")
+        try:
+            expenses = self.storage.get_expenses(query['person'])
+            expenses_json = json.dumps(expenses, ensure_ascii=False)
+            return FunctionMessage(name=self.__class__.__name__, content=expenses_json)
+        except Exception as e:
+            return FunctionMessage(name=self.__class__.__name__, content=f"Error retrieving expenses: {str(e)}")
+
+class CancelPendingExpensesTool(BaseTool):
+    name = "cancel_pending_expenses"
+    description = "Cancels all pending expenses."
+
+    def _run(self):
+        """Cancels all pending expenses."""
+        self.storage.cancel_pending_expenses()
+        try:
+            self.storage.cancel_pending_expenses()
+            return FunctionMessage(name=self.__class__.__name__, content="All pending expenses have been cancelled successfully.")
+        except Exception as e:
+            return FunctionMessage(name=self.__class__.__name__, content=f"Error cancelling pending expenses: {str(e)}")
