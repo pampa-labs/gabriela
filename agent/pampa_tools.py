@@ -4,7 +4,7 @@ from typing import List, Dict
 import json
 import requests
 from langchain_core.messages import FunctionMessage
-from .storage import StorageStrategy, TinyDBStorage
+from .expenses_storage import StorageStrategy, TinyDBStorage
 from langchain_core.messages import ToolCall
 from typing import Union, Dict, Optional, Any, Tuple
 from langchain.schema.runnable import RunnableConfig
