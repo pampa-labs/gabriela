@@ -41,7 +41,7 @@ class Agent:
         # Otherwise, we stop (reply to the user)
         return END
     
-    def _build_graph(self, ):
+    def _build_graph(self):
 
         tool_node = ToolNode(self._tools)
 
