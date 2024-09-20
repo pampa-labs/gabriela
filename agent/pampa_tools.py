@@ -1,13 +1,13 @@
+import json
+from typing import Any, Dict, List, Optional, Tuple, Union
+
+import requests
+from langchain.schema.runnable import RunnableConfig
+from langchain_core.messages import FunctionMessage, ToolCall
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
-from typing import List, Dict
-import json
-import requests
-from langchain_core.messages import FunctionMessage
+
 from .expenses_storage import StorageStrategy, TinyDBStorage
-from langchain_core.messages import ToolCall
-from typing import Union, Dict, Optional, Any, Tuple
-from langchain.schema.runnable import RunnableConfig
 
 
 class PampaBaseTool(BaseTool):
@@ -46,34 +46,17 @@ class PampaBaseTool(BaseTool):
         return self.run(tool_input, **kwargs)
 
 
-class TeamMembersTool(BaseTool):
-    name = "team"
-    description = "Retrieves the current list of team members in the organization."
-
-    def _run(self):
-        """Returns a list of team members."""
-        team_members = [
-            "Petra El Matero",
-            "Pancho El gaucho",
-            "Lauta El Asador"
-        ]
-        return ", ".join(team_members)
-
-    def _arun(self):
-        """Async implementation of the tool."""
-        raise NotImplementedError("TeamMembersTool does not support async")
-
-
 class Expense(BaseModel):
     person: str
     expense_type: str
     date: str
     total_value: float
 
+
 class ExpenseTrackerTool(PampaBaseTool):
-    name = "expense_tracker"
-    description = "Tracks expenses for team members."
-    args_schema = Expense
+    name: str = "expense_tracker"
+    description: str = "Tracks expenses for team members."
+    args_schema: type = Expense
     storage: StorageStrategy = TinyDBStorage()
 
     def _run(self, person: str, expense_type: str, date: str, total_value: float):
@@ -84,18 +67,23 @@ class ExpenseTrackerTool(PampaBaseTool):
             "expense_type": expense_type,
             "date": date,
             "total_value": total_value,
-            "state": "pending"
+            "state": "pending",
         }
 
         try:
             self.storage.add_expense(expense)
-            return FunctionMessage(name=self.__class__.__name__, content="Expense added successfully")
+            return FunctionMessage(
+                name=self.__class__.__name__, content="Expense added successfully"
+            )
         except Exception as e:
-            return FunctionMessage(name=self.__class__.__name__, content=f"Error adding expense: {str(e)}")
+            return FunctionMessage(
+                name=self.__class__.__name__, content=f"Error adding expense: {str(e)}"
+            )
+
 
 class GETExpenseTrackerTool(PampaBaseTool):
-    name = "get_expenses"
-    description = "Retrieves expenses based on a query."
+    name: str = "get_expenses"
+    description: str = "Retrieves expenses based on a query."
     storage: StorageStrategy = TinyDBStorage()
 
     def _run(self, query, config):
@@ -105,18 +93,27 @@ class GETExpenseTrackerTool(PampaBaseTool):
             expenses_json = json.dumps(expenses, ensure_ascii=False)
             return FunctionMessage(name=self.__class__.__name__, content=expenses_json)
         except Exception as e:
-            return FunctionMessage(name=self.__class__.__name__, content=f"Error retrieving expenses: {str(e)}")
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content=f"Error retrieving expenses: {str(e)}",
+            )
+
 
 class CancelPendingExpensesTool(BaseTool):
-    name = "cancel_pending_expenses"
-    description = "Cancels all pending expenses."
+    name: str = "cancel_pending_expenses"
+    description: str = "Cancels all pending expenses."
 
     def _run(self):
         """Cancels all pending expenses."""
         self.storage.cancel_pending_expenses()
         try:
             self.storage.cancel_pending_expenses()
-            return FunctionMessage(name=self.__class__.__name__, content="All pending expenses have been cancelled successfully.")
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content="All pending expenses have been cancelled successfully.",
+            )
         except Exception as e:
-            return FunctionMessage(name=self.__class__.__name__, content=f"Error cancelling pending expenses: {str(e)}")
-    
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content=f"Error cancelling pending expenses: {str(e)}",
+            )
