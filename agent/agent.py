@@ -9,13 +9,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 from langgraph.prebuilt import ToolNode
 
-from .pampa_tools import (
-    CancelPendingExpensesTool,
-    ExpenseTrackerTool,
-    GETExpenseTrackerTool,
-    GetMealsTool,
-    SetMealTool,
-)
+from .pampa_tools import tools_list
 from .prompt import AGENT_PROMPT
 from .state import AgentState
 
@@ -27,13 +21,7 @@ class Agent:
         self,
         prompt: Template = AGENT_PROMPT,
         model_name: str = "gpt-4o",
-        tools: List[Tool] = [
-            ExpenseTrackerTool(),
-            GETExpenseTrackerTool(),
-            CancelPendingExpensesTool(),
-            SetMealTool(),
-            GetMealsTool(),
-        ],
+        tools: List[Tool] = tools_list,
     ):
         self._prompt = prompt
         self._model = ChatOpenAI(model_name=model_name).bind_tools(tools)

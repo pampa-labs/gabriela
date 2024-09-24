@@ -184,3 +184,13 @@ class GetMealsTool(PampaBaseTool):
                 name=self.__class__.__name__,
                 content=f"Error retrieving meal plans: {str(e)}",
             )
+
+
+# List of all tools in the file (excluding base tools)
+tools_list = [
+    ExpenseTrackerTool,
+    GETExpenseTrackerTool,
+    CancelPendingExpensesTool,
+    SetMealTool,
+    GetMealsTool,
+]
