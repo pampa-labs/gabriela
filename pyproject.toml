@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "gabriela"
+version = "0.1.0"
+description = ""
+authors = ["fpingham <fpingham@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+langgraph = "^0.2.27"
+python-dotenv = "^1.0.1"
+pydantic = "^2.9.2"
+tinydb = "^4.8.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
