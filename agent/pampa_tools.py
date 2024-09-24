@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import date
 from typing import Any, Dict, List, Optional, Tuple, Union
 
@@ -103,10 +104,10 @@ class GETExpenseTrackerTool(PampaBaseTool):
 class CancelPendingExpensesTool(BaseTool):
     name: str = "cancel_pending_expenses"
     description: str = "Cancels all pending expenses."
+    storage: StorageStrategy = TinyDBStorage()
 
     def _run(self):
         """Cancels all pending expenses."""
-        self.storage.cancel_pending_expenses()
         try:
             self.storage.cancel_pending_expenses()
             return FunctionMessage(
@@ -186,11 +187,80 @@ class GetMealsTool(PampaBaseTool):
             )
 
 
+class CannotGoToOfficeIRL(BaseModel):
+    """
+    Represents a date when a team member cannot go to the office in real life (IRL).
+    """
+
+    team_member: str = Field(
+        description="The name of the team member who cannot go to the office IRL."
+    )
+    date: str = Field(
+        description="The date when the team member cannot go to the office IRL (format: YYYY-MM-DD)."
+    )
+    reason: Optional[str] = Field(
+        default=None,
+        description="Optional reason for not being able to go to the office IRL.",
+    )
+
+
+class SetCannotGoToOfficeIRLTool(PampaBaseTool):
+    name: str = "set_cannot_go_to_office_irl"
+    description: str = "Sets a date when a team member cannot go to the office IRL."
+    args_schema: type[CannotGoToOfficeIRL] = CannotGoToOfficeIRL
+    storage: StorageStrategy = TinyDBStorage()
+
+    def _run(self, team_member: str, date: str, reason: Optional[str] = None):
+        """Sets a date when a team member cannot go to the office IRL."""
+        cannot_go_to_office_irl = CannotGoToOfficeIRL(
+            team_member=team_member, date=date, reason=reason
+        )
+
+        try:
+            self.storage.add_out_of_office(cannot_go_to_office_irl.model_dump())
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content=f"Date set for {team_member} who cannot go to the office IRL on {date}",
+            )
+        except Exception as e:
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content=f"Error setting date for cannot go to office IRL: {str(e)}",
+            )
+
+
+class GetCannotGoToOfficeIRLTool(PampaBaseTool):
+    name: str = "get_cannot_go_to_office_irl"
+    description: str = "Retrieves dates when team members cannot go to the office IRL."
+    storage: StorageStrategy = TinyDBStorage()
+
+    def _run(self, team_member: Optional[str] = None, date: Optional[str] = None):
+        """Retrieves dates when team members cannot go to the office IRL based on the provided query."""
+        try:
+            logging.debug(
+                f"Querying cannot go to office IRL with team_member: {team_member}, date: {date}"
+            )
+            cannot_go_to_office_irl = self.storage.get_out_of_office(team_member, date)
+            logging.debug(
+                f"Retrieved cannot go to office IRL entries: {cannot_go_to_office_irl}"
+            )
+            response = json.dumps(cannot_go_to_office_irl, ensure_ascii=False)
+            return FunctionMessage(name=self.__class__.__name__, content=response)
+        except Exception as e:
+            logging.error(f"Error retrieving cannot go to office IRL dates: {str(e)}")
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content=f"Error retrieving cannot go to office IRL dates: {str(e)}",
+            )
+
+
 # List of all tools in the file (excluding base tools)
 tools_list = [
-    ExpenseTrackerTool,
-    GETExpenseTrackerTool,
-    CancelPendingExpensesTool,
-    SetMealTool,
-    GetMealsTool,
+    ExpenseTrackerTool(),
+    GETExpenseTrackerTool(),
+    CancelPendingExpensesTool(),
+    SetMealTool(),
+    GetMealsTool(),
+    SetCannotGoToOfficeIRLTool(),
+    GetCannotGoToOfficeIRLTool(),
 ]
