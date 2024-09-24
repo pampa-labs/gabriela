@@ -11,6 +11,7 @@ langgraph = "^0.2.27"
 python-dotenv = "^1.0.1"
 pydantic = "^2.9.2"
 tinydb = "^4.8.0"
+flask = "^3.0.3"
 
 
 [build-system]
