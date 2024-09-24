@@ -1,4 +1,5 @@
 import json
+from datetime import date
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import requests
@@ -56,7 +57,7 @@ class Expense(BaseModel):
 class ExpenseTrackerTool(PampaBaseTool):
     name: str = "expense_tracker"
     description: str = "Tracks expenses for team members."
-    args_schema: type = Expense
+    args_schema: type[Expense] = Expense
     storage: StorageStrategy = TinyDBStorage()
 
     def _run(self, person: str, expense_type: str, date: str, total_value: float):
@@ -116,4 +117,70 @@ class CancelPendingExpensesTool(BaseTool):
             return FunctionMessage(
                 name=self.__class__.__name__,
                 content=f"Error cancelling pending expenses: {str(e)}",
+            )
+
+
+class MealPlan(BaseModel):
+    """
+    Represents a meal plan for a specific date.
+    """
+
+    meal: str = Field(description="The name of the meal.")
+    date: str = Field(description="The date of the meal plan.")
+    toppings: Optional[List[str]] = Field(
+        default=None, description="Optional list of toppings for the meal."
+    )
+    team_member: str = Field(
+        description="The team member who set the meal plan. If not provided by the user, the agent needs to ask for it. 'Assistant' cannot be a team member."
+    )
+
+
+class SetMealTool(PampaBaseTool):
+    name: str = "set_meal"
+    description: str = (
+        "Sets the meal plan for a specific date with optional toppings and the team member who set it."
+    )
+    args_schema: type[MealPlan] = MealPlan
+    storage: StorageStrategy = TinyDBStorage()
+
+    def _run(
+        self,
+        meal: str,
+        date: str,
+        team_member: str,
+        toppings: Optional[List[str]] = None,
+    ):
+        """Sets the meal plan for a specific date."""
+        meal_plan = MealPlan(
+            meal=meal, date=date, toppings=toppings, team_member=team_member
+        )
+
+        try:
+            self.storage.add_meal(meal_plan.model_dump())
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content=f"Meal plan for {date} set successfully by {team_member}",
+            )
+        except Exception as e:
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content=f"Error setting meal plan: {str(e)}",
+            )
+
+
+class GetMealsTool(PampaBaseTool):
+    name: str = "get_meals"
+    description: str = "Retrieves meal plans based on a date query."
+    storage: StorageStrategy = TinyDBStorage()
+
+    def _run(self, date: Optional[str] = None):
+        """Retrieves meal plans based on the provided date query."""
+        try:
+            meals = self.storage.get_meals(date)
+            meals_json = json.dumps(meals, ensure_ascii=False)
+            return FunctionMessage(name=self.__class__.__name__, content=meals_json)
+        except Exception as e:
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content=f"Error retrieving meal plans: {str(e)}",
             )
