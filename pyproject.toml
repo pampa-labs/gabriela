@@ -4,23 +4,24 @@ version = "0.1.0"
 description = ""
 authors = ["fpingham <fpingham@gmail.com>"]
 readme = "README.md"
+license = "MIT"  # Add this line (replace "MIT" with your chosen license)
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.11,<3.12"  # Specify upper bound
 langgraph = "^0.2.27"
 python-dotenv = "^1.0.1"
 pydantic = "^2.9.2"
 tinydb = "^4.8.0"
-flask = "^3.0.3"
 twilio = "^9.3.1"
 openai = "^1.47.1"
 jinja2 = "^3.1.4"
 langchain-core = "^0.3.5"
 langchain-openai = "^0.2.0"
 requests = "^2.32.3"
-logging = "^0.4.9.6"
 langchain = "^0.3.0"
-
+gunicorn = "^20.1.0"
+fastapi = "^0.110.0"  # Add FastAPI
+uvicorn = "^0.27.1"  # Add Uvicorn for ASGI server
 
 [build-system]
 requires = ["poetry-core"]
