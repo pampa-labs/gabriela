@@ -1,4 +1,5 @@
 import json
+from bson import json_util
 import logging
 from datetime import date
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -9,7 +10,7 @@ from langchain_core.messages import FunctionMessage, ToolCall
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from .expenses_storage import StorageStrategy, TinyDBStorage
+from .expenses_storage import StorageStrategy, MongoDBStorage
 
 
 class PampaBaseTool(BaseTool):
@@ -59,7 +60,7 @@ class ExpenseTrackerTool(PampaBaseTool):
     name: str = "expense_tracker"
     description: str = "Tracks expenses for team members."
     args_schema: type[Expense] = Expense
-    storage: StorageStrategy = TinyDBStorage()
+    storage: StorageStrategy = MongoDBStorage()
 
     def _run(self, person: str, expense_type: str, date: str, total_value: float):
         """Adds a new expense to the tracker."""
@@ -86,14 +87,14 @@ class ExpenseTrackerTool(PampaBaseTool):
 class GETExpenseTrackerTool(PampaBaseTool):
     name: str = "get_expenses"
     description: str = "Retrieves expenses based on a query."
-    storage: StorageStrategy = TinyDBStorage()
+    storage: StorageStrategy = MongoDBStorage()
 
     def _run(self, query, config):
         """Retrieves expenses based on the provided query."""
         try:
             expenses = self.storage.get_expenses(self.person_id)
-            expenses_json = json.dumps(expenses, ensure_ascii=False)
-            return FunctionMessage(name=self.__class__.__name__, content=expenses_json)
+            expenses_json = json.loads(expenses)
+            return FunctionMessage(name=self.__class__.__name__, content=json.dumps(expenses_json, ensure_ascii=False))
         except Exception as e:
             return FunctionMessage(
                 name=self.__class__.__name__,
@@ -104,7 +105,7 @@ class GETExpenseTrackerTool(PampaBaseTool):
 class CancelPendingExpensesTool(BaseTool):
     name: str = "cancel_pending_expenses"
     description: str = "Cancels all pending expenses."
-    storage: StorageStrategy = TinyDBStorage()
+    storage: StorageStrategy = MongoDBStorage()
 
     def _run(self):
         """Cancels all pending expenses."""
@@ -142,7 +143,7 @@ class SetMealTool(PampaBaseTool):
         "Sets the meal plan for a specific date with optional toppings and the team member who set it."
     )
     args_schema: type[MealPlan] = MealPlan
-    storage: StorageStrategy = TinyDBStorage()
+    storage: StorageStrategy = MongoDBStorage()
 
     def _run(
         self,
@@ -172,14 +173,14 @@ class SetMealTool(PampaBaseTool):
 class GetMealsTool(PampaBaseTool):
     name: str = "get_meals"
     description: str = "Retrieves meal plans based on a date query."
-    storage: StorageStrategy = TinyDBStorage()
+    storage: StorageStrategy = MongoDBStorage()
 
     def _run(self, date: Optional[str] = None):
         """Retrieves meal plans based on the provided date query."""
         try:
             meals = self.storage.get_meals(date)
-            meals_json = json.dumps(meals, ensure_ascii=False)
-            return FunctionMessage(name=self.__class__.__name__, content=meals_json)
+            meals_json = json.loads(meals)
+            return FunctionMessage(name=self.__class__.__name__, content=json.dumps(meals_json, ensure_ascii=False))
         except Exception as e:
             return FunctionMessage(
                 name=self.__class__.__name__,
@@ -208,7 +209,7 @@ class SetCannotGoToOfficeIRLTool(PampaBaseTool):
     name: str = "set_cannot_go_to_office_irl"
     description: str = "Sets a date when a team member cannot go to the office IRL."
     args_schema: type[CannotGoToOfficeIRL] = CannotGoToOfficeIRL
-    storage: StorageStrategy = TinyDBStorage()
+    storage: StorageStrategy = MongoDBStorage()
 
     def _run(self, team_member: str, date: str, reason: Optional[str] = None):
         """Sets a date when a team member cannot go to the office IRL."""
@@ -232,7 +233,7 @@ class SetCannotGoToOfficeIRLTool(PampaBaseTool):
 class GetCannotGoToOfficeIRLTool(PampaBaseTool):
     name: str = "get_cannot_go_to_office_irl"
     description: str = "Retrieves dates when team members cannot go to the office IRL."
-    storage: StorageStrategy = TinyDBStorage()
+    storage: StorageStrategy = MongoDBStorage()
 
     def _run(self, team_member: Optional[str] = None, date: Optional[str] = None):
         """Retrieves dates when team members cannot go to the office IRL based on the provided query."""
@@ -244,8 +245,8 @@ class GetCannotGoToOfficeIRLTool(PampaBaseTool):
             logging.debug(
                 f"Retrieved cannot go to office IRL entries: {cannot_go_to_office_irl}"
             )
-            response = json.dumps(cannot_go_to_office_irl, ensure_ascii=False)
-            return FunctionMessage(name=self.__class__.__name__, content=response)
+            response_json = json.loads(cannot_go_to_office_irl)
+            return FunctionMessage(name=self.__class__.__name__, content=json.dumps(response_json, ensure_ascii=False))
         except Exception as e:
             logging.error(f"Error retrieving cannot go to office IRL dates: {str(e)}")
             return FunctionMessage(
