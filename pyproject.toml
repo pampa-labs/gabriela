@@ -24,7 +24,6 @@ fastapi = "^0.110.0"  # Add FastAPI
 uvicorn = "^0.27.1"  # Add Uvicorn for ASGI server
 python-multipart = "^0.0.10"
 pymongo = "^4.9.1"
-bson = "^0.5.10"
 
 [build-system]
 requires = ["poetry-core"]
