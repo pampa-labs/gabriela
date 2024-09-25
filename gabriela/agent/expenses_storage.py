@@ -1,10 +1,12 @@
-import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Optional
+from pymongo import MongoClient
+from dotenv import load_dotenv
+from pymongo.server_api import ServerApi
+import json
+from bson import json_util
 
-from tinydb import Query, TinyDB
-
+load_dotenv()
 
 class StorageStrategy(ABC):
     @abstractmethod
@@ -28,68 +30,77 @@ class StorageStrategy(ABC):
         pass
 
     @abstractmethod
-    def get_out_of_office(self, team_member: Optional[str], date: Optional[str]):
+    def get_out_of_office(self, team_member, date):
         pass
 
+    @abstractmethod
+    def cancel_pending_expenses(self):
+        pass
 
-class TinyDBStorage(StorageStrategy):
-    def __init__(self, db_file="expenses_db.json"):
-        self.db_path = os.path.join(os.path.dirname(__file__), db_file)
+class MongoDBStorage(StorageStrategy):
+    def __init__(self):
+        self.client = None
+        self.db = None
+
+    def _connect(self):
+        if not self.client:
+            mongo_uri = os.getenv('MONGO_URI')
+            if not mongo_uri:
+                raise ValueError("MONGO_URI environment variable is not set")
+            self.client = MongoClient(mongo_uri, server_api=ServerApi('1'))
+            try:
+                self.client.admin.command('ping')
+                print("Successfully connected to MongoDB!")
+            except Exception as e:
+                print(f"Error connecting to MongoDB: {e}")
+                raise
+            self.db = self.client['gabriela']
 
     def add_expense(self, expense: dict):
-        with TinyDB(self.db_path) as db:
-            expenses_table = db.table("expenses")
-            expenses_table.insert(expense)
+        self._connect()
+        expenses_collection = self.db['expenses']
+        expenses_collection.insert_one(expense)
 
-    def get_expenses(self, query):
-        with TinyDB(self.db_path) as db:
-            expenses_table = db.table("expenses")
-            if query:
-                return expenses_table.search(
-                    (Query().id == query) & (Query().state == "pending")
-                )
-            return expenses_table.search(Query().state == "pending")
+    def get_expenses(self, query=None):
+        self._connect()
+        expenses_collection = self.db['expenses']
+        if query:
+            results = list(expenses_collection.find({'id': query, 'state': 'pending'}))
+        else:
+            results = list(expenses_collection.find({'state': 'pending'}))
+        return json.dumps(results, default=json_util.default)
 
     def cancel_pending_expenses(self):
-        with TinyDB(self.db_path) as db:
-            expenses_table = db.table("expenses")
-            expenses_table.update({"state": "finished"}, Query().state == "pending")
+        self._connect()
+        expenses_collection = self.db['expenses']
+        expenses_collection.update_many({'state': 'pending'}, {'$set': {'state': 'finished'}})
 
     def add_meal(self, meal: dict):
-        with TinyDB(self.db_path) as db:
-            meals_table = db.table("meals")
-            meals_table.insert(meal)
+        self._connect()
+        meals_collection = self.db['meals']
+        meals_collection.insert_one(meal)
 
-    def get_meals(self, query):
-        with TinyDB(self.db_path) as db:
-            meals_table = db.table("meals")
-            if query:
-                return meals_table.search(Query().date == query)
-            return meals_table.all()
+    def get_meals(self, query=None):
+        self._connect()
+        meals_collection = self.db['meals']
+        if query:
+            results = list(meals_collection.find({'date': query}))
+        else:
+            results = list(meals_collection.find({}))
+        return json.dumps(results, default=json_util.default)
 
     def add_out_of_office(self, out_of_office: dict):
-        with TinyDB(self.db_path) as db:
-            out_of_office_table = db.table("out_of_office")
-            out_of_office_table.insert(out_of_office)
+        self._connect()
+        out_of_office_collection = self.db['out_of_office']
+        out_of_office_collection.insert_one(out_of_office)
 
-    def get_out_of_office(self, team_member: Optional[str], date: Optional[str]):
-        with TinyDB(self.db_path) as db:
-            out_of_office_table = db.table("out_of_office")
-            query = Query()
-
-            # Log the current state of the table
-            logging.debug(f"Current out_of_office entries: {out_of_office_table.all()}")
-
-            if team_member and date:
-                result = out_of_office_table.search(
-                    (query.team_member == team_member) & (query.date == date)
-                )
-            elif team_member:
-                result = out_of_office_table.search(query.team_member == team_member)
-            elif date:
-                result = out_of_office_table.search(query.date == date)
-            else:
-                result = out_of_office_table.all()
-
-            logging.debug(f"Query result: {result}")
-            return result
+    def get_out_of_office(self, team_member=None, date=None):
+        self._connect()
+        out_of_office_collection = self.db['out_of_office']
+        query = {}
+        if team_member:
+            query['team_member'] = team_member
+        if date:
+            query['date'] = date
+        results = list(out_of_office_collection.find(query))
+        return json.dumps(results, default=json_util.default)
