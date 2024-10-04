@@ -1,5 +1,5 @@
 .env
 /gabriela-env
 agent/__pycache__
-*.json
 __pycache__/
+*db.json
