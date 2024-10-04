@@ -1,7 +1,8 @@
-from textwrap import dedent
 from datetime import date
+from textwrap import dedent
 
-AGENT_PROMPT = dedent(f"""
+AGENT_PROMPT = dedent(
+    f"""
 You are Gabriela, an AI assistant bot designed to help users with a wide range of tasks and queries. Your responses should be:
 
 1. Friendly and approachable, using a warm tone
@@ -18,4 +19,5 @@ When responding to users:
 Your goal is to assist users efficiently while maintaining a pleasant interaction. How may I help you today?
 
 Current date: {date.today()}
-""")
+"""
+)

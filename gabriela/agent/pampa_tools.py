@@ -1,16 +1,16 @@
 import json
-from bson import json_util
 import logging
 from datetime import date
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import requests
+from bson import json_util
 from langchain.schema.runnable import RunnableConfig
 from langchain_core.messages import FunctionMessage, ToolCall
 from langchain_core.tools import BaseTool
 from pydantic import BaseModel, Field
 
-from .expenses_storage import StorageStrategy, MongoDBStorage
+from .expenses_storage import MongoDBStorage, StorageStrategy
 
 
 class PampaBaseTool(BaseTool):
@@ -94,7 +94,10 @@ class GETExpenseTrackerTool(PampaBaseTool):
         try:
             expenses = self.storage.get_expenses(self.person_id)
             expenses_json = json.loads(expenses)
-            return FunctionMessage(name=self.__class__.__name__, content=json.dumps(expenses_json, ensure_ascii=False))
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content=json.dumps(expenses_json, ensure_ascii=False),
+            )
         except Exception as e:
             return FunctionMessage(
                 name=self.__class__.__name__,
@@ -180,7 +183,10 @@ class GetMealsTool(PampaBaseTool):
         try:
             meals = self.storage.get_meals(date)
             meals_json = json.loads(meals)
-            return FunctionMessage(name=self.__class__.__name__, content=json.dumps(meals_json, ensure_ascii=False))
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content=json.dumps(meals_json, ensure_ascii=False),
+            )
         except Exception as e:
             return FunctionMessage(
                 name=self.__class__.__name__,
@@ -246,7 +252,10 @@ class GetCannotGoToOfficeIRLTool(PampaBaseTool):
                 f"Retrieved cannot go to office IRL entries: {cannot_go_to_office_irl}"
             )
             response_json = json.loads(cannot_go_to_office_irl)
-            return FunctionMessage(name=self.__class__.__name__, content=json.dumps(response_json, ensure_ascii=False))
+            return FunctionMessage(
+                name=self.__class__.__name__,
+                content=json.dumps(response_json, ensure_ascii=False),
+            )
         except Exception as e:
             logging.error(f"Error retrieving cannot go to office IRL dates: {str(e)}")
             return FunctionMessage(
