@@ -66,7 +66,7 @@ class ExpenseTrackerTool(PampaBaseTool):
         """Adds a new expense to the tracker."""
 
         expense = {
-            "id": self.person_id,
+            "id": person,
             "expense_type": expense_type,
             "date": date,
             "total_value": total_value,
@@ -86,13 +86,13 @@ class ExpenseTrackerTool(PampaBaseTool):
 
 class GETExpenseTrackerTool(PampaBaseTool):
     name: str = "get_expenses"
-    description: str = "Retrieves expenses based on a query."
+    description: str = "Retrieves all pending expenses"
     storage: StorageStrategy = MongoDBStorage()
 
     def _run(self, query, config):
         """Retrieves expenses based on the provided query."""
         try:
-            expenses = self.storage.get_expenses(self.person_id)
+            expenses = self.storage.get_expenses(query)
             expenses_json = json.loads(expenses)
             return FunctionMessage(
                 name=self.__class__.__name__,

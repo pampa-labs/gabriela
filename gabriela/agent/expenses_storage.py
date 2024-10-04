@@ -67,10 +67,7 @@ class MongoDBStorage(StorageStrategy):
     def get_expenses(self, query=None):
         self._connect()
         expenses_collection = self.db["expenses"]
-        if query:
-            results = list(expenses_collection.find({"id": query, "state": "pending"}))
-        else:
-            results = list(expenses_collection.find({"state": "pending"}))
+        results = list(expenses_collection.find({"state": "pending"}))
         return json.dumps(results, default=json_util.default)
 
     def cancel_pending_expenses(self):
@@ -88,10 +85,8 @@ class MongoDBStorage(StorageStrategy):
     def get_meals(self, query=None):
         self._connect()
         meals_collection = self.db["meals"]
-        if query:
-            results = list(meals_collection.find({"date": query}))
-        else:
-            results = list(meals_collection.find({}))
+
+        results = list(meals_collection.find({}))
         return json.dumps(results, default=json_util.default)
 
     def add_out_of_office(self, out_of_office: dict):

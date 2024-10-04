@@ -1,6 +1,13 @@
 # Gabriela - WhatsApp AI Assistant
 
-Gabriela is an AI-powered WhatsApp assistant built using FastAPI, Twilio, and OpenAI.
+Gabriela is an AI-powered WhatsApp assistant built using FastAPI, Twilio, and OpenAI. The storage is done using MongoDB. The architecture is maily LangGraph.
+
+## Current supported features
+
+- Expenses registration
+- Expenses cancellation
+- Meal registration
+- Out of office registration
 
 ## Setup Instructions
 
@@ -16,11 +23,13 @@ Gabriela is an AI-powered WhatsApp assistant built using FastAPI, Twilio, and Op
    LANGSMITH_API_KEY=your_langsmith_api_key
    LANGCHAIN_TRACING_V2=true
    LANGCHAIN_PROJECT=gabriela
+   MONGODB_URI=your_mongodb_uri
    PORT=8000
    ```
    Replace `your_openai_api_key` and `your_langsmith_api_key` with your actual API keys.
+   Replace `your_mongodb_uri` with your actual MongoDB URI (you can create a free cluster in MongoDB Atlas with a db called `gabriela` - collections are created automatically)
 
-4. Run the FastAPI server:
+4. Run the FastAPI server using any service you want, we recommend Render:
    ```
    uvicorn main:app --host 0.0.0.0 --port $PORT
    ```
@@ -31,7 +40,7 @@ Gabriela is an AI-powered WhatsApp assistant built using FastAPI, Twilio, and Op
 
 ## Usage
 
-Once set up, users can interact with Gabriela by sending messages to the configured WhatsApp number. Gabriela will process the messages and respond accordingly.
+Once set up, users can interact with Gabriela by sending messages to the configured WhatsApp number. Gabriela will process the messages and respond accordingly. Twilio Sandbox has some limitations, only three users can be added to the sandbox and after 72 hours the sandbox expires and the number has to be recreated.
 
 ## Development
 
