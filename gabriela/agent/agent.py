@@ -29,8 +29,8 @@ class Agent:
         self._build_graph()
 
     def _call_model(self, state: AgentState) -> dict:
-        if not state["messages"]:
-            return {"messages": [SystemMessage(content=self.prompt.render())]}
+        if not state["messages"] or not isinstance(state["messages"][0], SystemMessage):
+            state["messages"].insert(0, SystemMessage(content=self._prompt))
         try:
             response = self._model.invoke(state["messages"])
             return {"messages": [response]}
