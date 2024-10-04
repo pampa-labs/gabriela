@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import Any, Dict, List, Literal, Optional
 
 from dotenv import load_dotenv
 from jinja2 import Template
@@ -79,8 +79,11 @@ class Agent:
         # Compile the graph
         self._graph = workflow.compile(checkpointer=checkpointer)
 
-    def invoke(self, id, message: str):
+    def invoke(self, id, message: str, image_url: Optional[str] = None):
+        content: List[Dict[str, Any]] = [{"type": "text", "text": message}]
+        if image_url:
+            content.append({"type": "image_url", "image_url": image_url})
         return self._graph.invoke(
-            input={"messages": [HumanMessage(content=message)]},
+            input={"messages": [HumanMessage(content=content)]},
             config={"configurable": {"thread_id": id}},
         )
